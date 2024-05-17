@@ -14,33 +14,60 @@ function Permissions() {
     []
   );
   const [searchTerm, setSearchTerm] = React.useState("");
+  const [selectedUser, setSelectedUser] = React.useState<string>("");
 
   const fetchFilePermissionData = async () => {
     const filePermissionData = await fetch("http://localhost:3000/api/proxy");
     return filePermissionData.json();
   };
 
+  const users = React.useMemo(
+    () => [
+      {
+        username: "johnDoe111",
+        firstName: "John",
+        lastName: "Doe",
+      },
+      {
+        username: "janeDoe222",
+        firstName: "Jane",
+        lastName: "Doe",
+      },
+      {
+        username: "jessieDoe333",
+        firstName: "Jessie",
+        lastName: "Doe",
+      },
+      {
+        username: "josephDoe333",
+        firstName: "Joseph",
+        lastName: "Doe",
+      },
+    ],
+    []
+  );
+
   useEffect(() => {
     fetchFilePermissionData().then((permissions) => {
       if (permissions?.length) {
-        const items: PermissionItem[] = permissions.map((item: any) => {
-          return {
+        const items: PermissionItem[] = users.flatMap((user: any) => {
+          return permissions.map((item: any) => ({
             PermissionID: item?.permissionID,
-            User: "johnDoe111",
-            FirstName: "John",
-            LastName: "Doe",
+            User: user.username,
+            FirstName: user.firstName,
+            LastName: user.lastName,
             Comment: item?.comment,
             Write: item?.canWriteFiles,
             Delete: item?.canDeleteFiles,
             Upload: item?.canUploadFiles,
             Download: item?.canDownloadFiles,
-          };
+          }));
         });
         setItems(items);
         setOriginalItems(items);
       }
     });
-  }, []);
+  }, [users]);
 
   const handleSearch = (e: React.ChangeEvent<HTMLInputElement>) => {
     const searchTerm = e.target.value.toLowerCase();
@@ -54,6 +81,19 @@ function Permissions() {
           item.FirstName.toLowerCase().includes(searchTerm) ||
           item.LastName.toLowerCase().includes(searchTerm)
         );
+      });
+      setItems(searchedValues);
+    }
+  };
+
+  const handleSelectUser = (e: any) => {
+    const selectedUser = e.target.value;
+    setSelectedUser(selectedUser); // Update the selectedUser state
+    if (selectedUser === "Select" || !selectedUser) {
+      setItems(originalItems);
+    } else {
+      const searchedValues = originalItems.filter((item) => {
+        return item.User.toLowerCase().includes(selectedUser.toLowerCase());
       });
       setItems(searchedValues);
     }
@@ -209,15 +249,20 @@ function Permissions() {
         name="search"
         value={searchTerm}
       />
-      <select title="Select user">
+      <select title="Select user" onChange={handleSelectUser}>
         <option value="Select">Select User</option>
-        {originalItems?.map((item: any) => {
-          return (
-            <option key={item.permissionID} value={item.permissionID}>
-              {item.User}
-            </option>
-          );
-        })}
+        {users?.map(
+          (
+            item: { username: string; firstName: string; lastName: string },
+            index: number
+          ) => {
+            return (
+              <option key={index} value={item?.username}>
+                {item?.username}
+              </option>
+            );
+          }
+        )}
       </select>
       <button
         className="btn btn-sm btn-gradient-primary py-3"
