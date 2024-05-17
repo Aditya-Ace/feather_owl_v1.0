@@ -4,17 +4,34 @@ import {
   DetailsListLayoutMode,
 } from "@fluentui/react/lib/DetailsList";
 import { Spinner } from "@fluentui/react/lib/Spinner";
-
 import React, { useEffect } from "react";
+import {
+  Breadcrumb,
+  Dropdown,
+  IDropdownOption,
+  IDropdownStyles,
+  ISearchBoxStyles,
+  PrimaryButton,
+  SearchBox,
+  Stack,
+  initializeIcons,
+} from "@fluentui/react";
+
 import { PermissionItem } from "./types";
+import styles from "./page.module.css";
+
+const searchBoxStyles: Partial<ISearchBoxStyles> = {
+  root: { width: 300 },
+};
+const dropdownStyles: Partial<IDropdownStyles> = {
+  dropdown: { width: 300 },
+};
 
 function Permissions() {
   const [items, setItems] = React.useState<PermissionItem[]>([]);
   const [originalItems, setOriginalItems] = React.useState<PermissionItem[]>(
     []
   );
-  const [searchTerm, setSearchTerm] = React.useState("");
-  const [selectedUser, setSelectedUser] = React.useState<string>("");
 
   const fetchFilePermissionData = async () => {
     const filePermissionData = await fetch("http://localhost:3000/api/proxy");
@@ -47,6 +64,8 @@ function Permissions() {
     []
   );
 
+  initializeIcons();
+
   useEffect(() => {
     fetchFilePermissionData().then((permissions) => {
       if (permissions?.length) {
@@ -69,9 +88,8 @@ function Permissions() {
     });
   }, [users]);
 
-  const handleSearch = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const searchTerm = e.target.value.toLowerCase();
-    setSearchTerm(searchTerm);
+  const handleSearch = (value: string) => {
+    const searchTerm = value.toLowerCase();
     if (searchTerm === "") {
       setItems(originalItems);
     } else {
@@ -86,17 +104,16 @@ function Permissions() {
     }
   };
 
-  const handleSelectUser = (e: any) => {
-    const selectedUser = e.target.value;
-    setSelectedUser(selectedUser); // Update the selectedUser state
-    if (selectedUser === "Select" || !selectedUser) {
+  const handleSelectUser = (selectedUser: IDropdownOption | undefined) => {
+    console.log(selectedUser);
+    if (!selectedUser || !selectedUser.key || selectedUser.key === "Select") {
       setItems(originalItems);
-    } else {
-      const searchedValues = originalItems.filter((item) => {
-        return item.User.toLowerCase().includes(selectedUser.toLowerCase());
-      });
-      setItems(searchedValues);
+      return;
     }
+    const searchedValues = originalItems.filter((item) => {
+      return item.User.toLowerCase().includes(selectedUser?.text.toLowerCase());
+    });
+    setItems(searchedValues);
   };
 
   const handleAddUser = () => {
@@ -237,53 +254,66 @@ function Permissions() {
     },
   ];
 
-  return (
-    <section>
-      <input
-        type="text"
-        className="form-control"
-        placeholder="Search..."
-        aria-label="Search"
-        aria-describedby="Search"
-        onChange={handleSearch}
-        name="search"
-        value={searchTerm}
-      />
-      <select title="Select user" onChange={handleSelectUser}>
-        <option value="Select">Select User</option>
-        {users?.map(
-          (
-            item: { username: string; firstName: string; lastName: string },
-            index: number
-          ) => {
-            return (
-              <option key={index} value={item?.username}>
-                {item?.username}
-              </option>
-            );
-          }
-        )}
-      </select>
-      <button
-        className="btn btn-sm btn-gradient-primary py-3"
-        type="button"
-        onClick={handleAddUser}
-      >
-        Add User
-      </button>
-      <Spinner label="Loading..." />
-      <DetailsList
-        items={items}
-        columns={columns}
-        setKey="none"
-        layoutMode={DetailsListLayoutMode.justified}
-        selectionPreservedOnEmptyClick={true}
-        isHeaderVisible={true}
-        enterModalSelectionOnTouch={true}
-        ariaLabelForSelectionColumn="Toggle selection"
-        ariaLabelForSelectAllCheckbox="Toggle selection for all items"
-        checkButtonAriaLabel="select row"
-      />
+  const options: IDropdownOption[] = React.useMemo(
+    () => [
+      {
+        key: "Select",
+        text: "Select",
+      },
+      ...users.map((user: any) => {
+        return {
+          key: user.username,
+          text: user.username,
+        };
+      }),
+    ],
+    [users]
+  );
+
+  return items.length === 0 ? (
+    <Spinner label="Loading..." />
+  ) : (
+    <section className={styles.permissionsContainer}>
+      <div className={styles.permissionContainer}>
+        <div>
+          <div className={styles.permissionsControl}>
+            <SearchBox
+              styles={searchBoxStyles}
+              placeholder="Search"
+              onEscape={(ev) => {
+                handleSearch("");
+              }}
+              onClear={(ev) => {
+                handleSearch("");
+              }}
+              onSearch={(newValue) => handleSearch(newValue)}
+            />
+            <div className={styles.permissionsControl_inner}>
+              <Dropdown
+                placeholder="Select User"
+                options={options}
+                styles={dropdownStyles}
+                onChange={(e, item) => handleSelectUser(item)}
+              />
+              <PrimaryButton text="Add User" onClick={handleAddUser} />
+            </div>
+          </div>
+        </div>
+        <div>
+          <DetailsList
+            items={items}
+            columns={columns}
+            setKey="none"
+            layoutMode={DetailsListLayoutMode.justified}
+            selectionPreservedOnEmptyClick={true}
+            isHeaderVisible={true}
+            enterModalSelectionOnTouch={true}
+            ariaLabelForSelectionColumn="Toggle selection"
+            ariaLabelForSelectAllCheckbox="Toggle selection for all items"
+            checkButtonAriaLabel="select row"
+          />
+        </div>
+      </div>
     </section>
   );
 }
