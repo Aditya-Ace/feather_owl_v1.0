@@ -6,20 +6,18 @@ import {
 import { Spinner } from "@fluentui/react/lib/Spinner";
 import React, { useEffect } from "react";
 import {
-  Breadcrumb,
   Dropdown,
   IDropdownOption,
   IDropdownStyles,
   ISearchBoxStyles,
   PrimaryButton,
   SearchBox,
-  Stack,
   initializeIcons,
 } from "@fluentui/react";
+import useSWR from "swr";
 
 import { PermissionItem } from "./types";
 import styles from "./page.module.css";
-import useSWR from "swr";
 
 const searchBoxStyles: Partial<ISearchBoxStyles> = {
   root: { width: 300 },
@@ -28,13 +26,15 @@ const dropdownStyles: Partial<IDropdownStyles> = {
   dropdown: { width: 300 },
 };
 const fetcher = async (url: string) => {
+  console.log(url);
   const filePermissionData = await fetch(url);
   return filePermissionData.json();
 };
 
 function Permissions() {
+  initializeIcons();
   const { data, error, isLoading } = useSWR(
-    "http://localhost:3000/api/permissions",
+    `http://localhost:3000/api/permissions`,
     fetcher
   );
   const [items, setItems] = React.useState<PermissionItem[]>([]);
@@ -67,8 +67,6 @@ function Permissions() {
     ],
     []
   );
-
-  initializeIcons();
 
   useEffect(() => {
     if (data?.length) {
