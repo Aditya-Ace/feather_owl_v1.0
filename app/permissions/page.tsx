@@ -19,6 +19,7 @@ import {
 
 import { PermissionItem } from "./types";
 import styles from "./page.module.css";
+import useSWR from "swr";
 
 const searchBoxStyles: Partial<ISearchBoxStyles> = {
   root: { width: 300 },
@@ -26,17 +27,20 @@ const searchBoxStyles: Partial<ISearchBoxStyles> = {
 const dropdownStyles: Partial<IDropdownStyles> = {
   dropdown: { width: 300 },
 };
+const fetcher = async (url: string) => {
+  const filePermissionData = await fetch(url);
+  return filePermissionData.json();
+};
 
 function Permissions() {
+  const { data, error, isLoading } = useSWR(
+    "http://localhost:3000/api/permissions",
+    fetcher
+  );
   const [items, setItems] = React.useState<PermissionItem[]>([]);
   const [originalItems, setOriginalItems] = React.useState<PermissionItem[]>(
     []
   );
-
-  const fetchFilePermissionData = async () => {
-    const filePermissionData = await fetch("http://localhost:3000/api/proxy");
-    return filePermissionData.json();
-  };
 
   const users = React.useMemo(
     () => [
@@ -67,26 +71,24 @@ function Permissions() {
   initializeIcons();
 
   useEffect(() => {
-    fetchFilePermissionData().then((permissions) => {
-      if (permissions?.length) {
-        const items: PermissionItem[] = users.flatMap((user: any) => {
-          return permissions.map((item: any) => ({
-            PermissionID: item?.permissionID,
-            User: user.username,
-            FirstName: user.firstName,
-            LastName: user.lastName,
-            Comment: item?.comment,
-            Write: item?.canWriteFiles,
-            Delete: item?.canDeleteFiles,
-            Upload: item?.canUploadFiles,
-            Download: item?.canDownloadFiles,
-          }));
-        });
-        setItems(items);
-        setOriginalItems(items);
-      }
-    });
-  }, [users]);
+    if (data?.length) {
+      const items: PermissionItem[] = users.flatMap((user: any) => {
+        return data.map((item: any) => ({
+          PermissionID: item?.permissionID,
+          User: user.username,
+          FirstName: user.firstName,
+          LastName: user.lastName,
+          Comment: item?.comment,
+          Write: item?.canWriteFiles,
+          Delete: item?.canDeleteFiles,
+          Upload: item?.canUploadFiles,
+          Download: item?.canDownloadFiles,
+        }));
+      });
+      setItems(items);
+      setOriginalItems(items);
+    }
+  }, [users, data]);
 
   const handleSearch = (value: string) => {
     const searchTerm = value.toLowerCase();
@@ -270,8 +272,13 @@ function Permissions() {
     [users]
   );
 
-  return items.length === 0 ? (
-    <Spinner label="Loading..." />
+  if (error) return "An error has occurred.";
+  return isLoading ? (
+    <Spinner label="Loading..." /> ? (
+      error
+    ) : (
+      <div>Failed to load the data</div>
+    )
   ) : (
     <section className={styles.permissionsContainer}>
       <div className={styles.permissionContainer}>
